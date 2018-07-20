@@ -43,7 +43,7 @@ class LinearDecoder(nn.Module):
 
 def get_language_model(n_tok, em_sz, nhid, nlayers, pad_token, decode_train=True, dropouts=None):
     if dropouts is None: dropouts = [0.5,0.4,0.5,0.05,0.3]
-    rnn_enc = RNN_Encoder(n_tok, em_sz, nhid=nhid, nlayers=nlayers, pad_token=pad_token,
+    rnn_enc = RNN_Encoder(n_tok, em_sz, n_hid=nhid, n_layers=nlayers, pad_token=pad_token,
                  dropouti=dropouts[0], wdrop=dropouts[2], dropoute=dropouts[3], dropouth=dropouts[4])
     rnn_dec = LinearDecoder(n_tok, em_sz, dropouts[1], decode_train=decode_train, tie_encoder=rnn_enc.encoder)
     return SequentialRNN(rnn_enc, rnn_dec)
@@ -83,7 +83,7 @@ class CrossEntDecoder(nn.Module):
         return F.cross_entropy(input, target)
 
 def get_learner(drops, n_neg, sampled, md, em_sz, nh, nl, opt_fn, prs):
-    m = to_gpu(get_language_model(md.nt, em_sz, nh, nl, md.pad_idx, decode_train=False, dropouts=drops))
+    m = to_gpu(get_language_model(md.n_tok, em_sz, nh, nl, md.pad_idx, decode_train=False, dropouts=drops))
     crit = CrossEntDecoder(prs, m[1].decoder, n_neg=n_neg, sampled=sampled).cuda()
     learner = RNN_Learner(md, LanguageModel(m), opt_fn=opt_fn)
     crit.dw = learner.model[0].encoder.weight

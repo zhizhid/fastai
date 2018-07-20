@@ -105,7 +105,11 @@ def add_datepart(df, fldname, drop=True, time=False):
     2   2000  3      11    13   0          73         False         False           False           False             False        False          952905600
     """
     fld = df[fldname]
-    if not np.issubdtype(fld.dtype, np.datetime64):
+    fld_dtype = fld.dtype
+    if isinstance(fld_dtype, pd.core.dtypes.dtypes.DatetimeTZDtype):
+        fld_dtype = np.datetime64
+
+    if not np.issubdtype(fld_dtype, np.datetime64):
         df[fldname] = fld = pd.to_datetime(fld, infer_datetime_format=True)
     targ_pre = re.sub('[Dd]ate$', '', fldname)
     attr = ['Year', 'Month', 'Week', 'Day', 'Dayofweek', 'Dayofyear',
@@ -421,9 +425,9 @@ def proc_df(df, y_fld=None, skip_flds=None, ignore_flds=None, do_scale=False, na
     if not ignore_flds: ignore_flds=[]
     if not skip_flds: skip_flds=[]
     if subset: df = get_sample(df,subset)
+    else: df = df.copy()
     ignored_flds = df.loc[:, ignore_flds]
     df.drop(ignore_flds, axis=1, inplace=True)
-    df = df.copy()
     if preproc_fn: preproc_fn(df)
     if y_fld is None: y = None
     else:
@@ -433,7 +437,11 @@ def proc_df(df, y_fld=None, skip_flds=None, ignore_flds=None, do_scale=False, na
     df.drop(skip_flds, axis=1, inplace=True)
 
     if na_dict is None: na_dict = {}
+    else: na_dict = na_dict.copy()
+    na_dict_initial = na_dict.copy()
     for n,c in df.items(): na_dict = fix_missing(df, c, n, na_dict)
+    if len(na_dict_initial.keys()) > 0:
+        df.drop([a + '_na' for a in list(set(na_dict.keys()) - set(na_dict_initial.keys()))], axis=1, inplace=True)
     if do_scale: mapper = scale_vars(df, mapper)
     for n,c in df.items(): numericalize(df, c, n, max_n_cat)
     df = pd.get_dummies(df, dummy_na=True)
